@@ -3,8 +3,12 @@ package org.talend.dataquality.workshop;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
 
 public class AESToolkit {
 
@@ -44,4 +48,22 @@ public class AESToolkit {
         }
     }
 
+    /**
+     * read the reference results in plain text, encrypt with AES.
+     * Then copy the encrypted data from console output back to file.
+     *
+     * @param args
+     * @throws IOException
+     */
+    public static void main(String[] args) throws IOException {
+        if (args.length > 0) {
+            final String passPhrase = args[0];
+            try (InputStream in = EvaluationProgram.class.getResourceAsStream("reference_data.csv")) {
+                List<String> lines = IOUtils.readLines(in, "UTF-8");
+                lines.stream().forEach(line -> System.out.println(encrypt(passPhrase, line)));
+            }
+        } else {
+            System.err.println("put the pass phrase as param.");
+        }
+    }
 }

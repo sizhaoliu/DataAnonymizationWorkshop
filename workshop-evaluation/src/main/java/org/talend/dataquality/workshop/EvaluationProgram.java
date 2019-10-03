@@ -22,11 +22,12 @@ public class EvaluationProgram {
     }
 
     private void loadSecretMap(String passPhrase) throws IOException {
-        InputStream in = EvaluationProgram.class.getResourceAsStream("reference_data.csv");
-        List<String> lines = IOUtils.readLines(in, "UTF-8");
-        secretMap = lines.stream().skip(1) // skip header line
-                .map(line -> AESToolkit.decrypt(passPhrase, line).split(","))
-                .collect(Collectors.toMap(a -> a[0] + " " + a[1], a -> a.length > 2 ? a[2] : "")); // concat first/last name
+        try (InputStream in = EvaluationProgram.class.getResourceAsStream("reference_data.csv")) {
+            List<String> lines = IOUtils.readLines(in, "UTF-8");
+            secretMap = lines.stream().skip(1) // skip header line
+                    .map(line -> AESToolkit.decrypt(passPhrase, line).split(","))
+                    .collect(Collectors.toMap(a -> a[0] + " " + a[1], a -> a.length > 2 ? a[2] : "")); // concat first/last name
+        }
     }
 
     private void runAllEvaluations() throws IOException {
@@ -52,17 +53,18 @@ public class EvaluationProgram {
     }
 
     private long runEvaluationOnFile(String fileName) throws IOException {
-        InputStream in = EvaluationProgram.class.getResourceAsStream("Answers/" + fileName);
-        List<String> lines = IOUtils.readLines(in, "UTF-8");
-        Map<String, String> resultMap = lines.stream()
-                .filter(line -> !line.startsWith("#")) // omit lines starting with #
-                .map(line -> line.split("[,;]")) // split by comma or semicolon
-                .filter(array -> array.length > 2) // omit lines containing less than 3 tokens
-                .collect(Collectors.toMap(a -> a[0] + " " + a[1], a -> a[2]));
+        try (InputStream in = EvaluationProgram.class.getResourceAsStream("Answers/" + fileName)) {
+            List<String> lines = IOUtils.readLines(in, "UTF-8");
+            Map<String, String> resultMap = lines.stream()
+                    .filter(line -> !line.startsWith("#")) // omit lines starting with #
+                    .limit(60) // validate the first 60 answers including the header
+                    .map(line -> line.split("[,;]")) // split by comma or semicolon
+                    .filter(array -> array.length > 2) // omit lines containing less than 3 tokens
+                    .collect(Collectors.toMap(a -> a[0] + " " + a[1], a -> a[2]));
 
-        return resultMap.entrySet().stream().filter(e -> e.getValue().equals(secretMap.get(e.getKey()))).count();
+            return resultMap.entrySet().stream().filter(e -> e.getValue().equals(secretMap.get(e.getKey()))).count();
+        }
     }
-
 
     public static void main(String[] args) throws IOException {
         if (args.length > 0) {
@@ -71,6 +73,5 @@ public class EvaluationProgram {
         } else {
             System.err.println("put the pass phrase as param.");
         }
-
     }
 }
